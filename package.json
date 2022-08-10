@@ -1,20 +1,19 @@
 {
-  "name": "react-native-pell-rich-editor",
+  "name": "@badhanganesh/react-native-pell-rich-editor",
   "description": "React Native Rich Editor",
-  "version": "1.8.8",
+  "version": "1.8.9",
   "main": "src/index.js",
   "license": "MIT",
   "private": false,
   "author": {
-    "name": "wxik",
-    "email": "io@wxik.com"
+    "name": "badhanganesh",
+    "email": "ganesh_randy@yahoo.com"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/wxik/react-native-rich-editor.git"
+    "url": "https://github.com/BadhanGanesh-HappyFox/react-native-rich-editor.git"
   },
-  "dependencies": {
-  },
+  "dependencies": {},
   "devDependencies": {
     "@types/react-native": "*"
   },

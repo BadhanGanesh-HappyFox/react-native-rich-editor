@@ -34,7 +34,7 @@ function createHTML(options = {}) {
         inputListener = false,
         autoCapitalize = 'off',
         enterKeyHint = '',
-        autoCorrect = false,
+        autoCorrect = true,
         defaultParagraphSeparator = 'div',
         // When first gaining focus, the cursor moves to the end of the text
         firstFocusEnd = true,
@@ -52,7 +52,9 @@ function createHTML(options = {}) {
         * {outline: 0px solid transparent;-webkit-tap-highlight-color: rgba(0,0,0,0);-webkit-touch-callout: none;box-sizing: border-box;}
         html, body { margin: 0; padding: 0;font-family: Arial, Helvetica, sans-serif; font-size:1em; height: 100%}
         body { overflow-y: hidden; -webkit-overflow-scrolling: touch;background-color: ${backgroundColor};caret-color: ${caretColor};}
-        .content {font-family: Arial, Helvetica, sans-serif;color: ${color}; width: 100%;${!useContainer ? 'height:100%;' : ''}-webkit-overflow-scrolling: touch;padding-left: 0;padding-right: 0;}
+        .content {font-family: Arial, Helvetica, sans-serif;color: ${color}; width: 100%;${
+        !useContainer ? 'height:100%;' : ''
+    }-webkit-overflow-scrolling: touch;padding-left: 0;padding-right: 0;}
         .pell { height: 100%;} .pell-content { outline: 0; overflow-y: auto;padding: 10px;height: 100%;${contentCSSText}}
     </style>
     <style>
@@ -305,8 +307,7 @@ function createHTML(options = {}) {
                     data = data || {};
                     var title = data.title;
                     title = title || window.getSelection().toString();
-                    // title = title || window.prompt('Enter the link title');
-                    var url = data.url || window.prompt('Enter the link URL');
+                    var url = data.url || window.prompt('Enter URL for Link', 'https://');
                     if (url){
                         exec('insertHTML', "<a href='"+ url +"'>"+(title || url)+"</a>");
                     }
