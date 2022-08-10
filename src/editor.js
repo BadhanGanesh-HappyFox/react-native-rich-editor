@@ -76,7 +76,6 @@ function createHTML(options = {}) {
         var generateId = function (){
             return "auto_" + (++ _randomID);
         }
-
         var body = document.body, docEle = document.documentElement;
         var defaultParagraphSeparatorString = 'defaultParagraphSeparator';
         var formatBlock = 'formatBlock';
@@ -102,26 +101,22 @@ function createHTML(options = {}) {
         function querys(command){
             return document.querySelectorAll(command);
         }
-
         function exec(command) {
             var value = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
             return document.execCommand(command, false, value);
         };
-
         function asyncExec(command){
             var args = Array.prototype.slice.call(arguments);
             setTimeout(function(){
                 exec.apply(null, args);
             }, 0);
         }
-
         function _postMessage(data){
             exports.window.postMessage(JSON.stringify(data));
         }
         function postAction(data){
             editor.content.contentEditable === 'true' && _postMessage(data);
         };
-
         exports.isRN && (
             console.log = function (){
                 var data = Array.prototype.slice.call(arguments);
@@ -129,29 +124,23 @@ function createHTML(options = {}) {
                 __DEV__ && postAction({type: 'LOG', data});
             }
         )
-
         function formatParagraph(async){
             (async ? asyncExec: exec)(formatBlock, '<' + editor.paragraphSeparator + '>' );
         }
-
         function getNodeByClass(node, className){
             return node ? (node.nodeType === Node.ELEMENT_NODE && node.classList.contains(className)? node : getNodeByClass(node.parentNode, className)): node;
         }
-
         function getNodeByName(node, name){
             return node? (node.nodeType === Node.ELEMENT_NODE && node.nodeName === name? node: getNodeByName(node.parentNode, name)): node;
         }
-
         function setCollapse(node){
             var selection = window.getSelection();
             selection.selectAllChildren(node);
             selection.collapseToEnd();
         }
-
         function checkboxNode(node){
             return getNodeByClass(node, 'x-todo');
         }
-
         function execCheckboxList (node, html){
             var html = createCheckbox(node ? node.innerHTML: '');
             var HTML = "<ol class='x-todo'><li>"+ html +"</li></ol>"
@@ -162,19 +151,16 @@ function createHTML(options = {}) {
             } else {
                 exec("insertHTML", HTML);
             }
-
             foNode && setTimeout(function (){
                 setCollapse(foNode);
             });
         }
-
         var _checkboxFlag = 0; // 1 = add checkbox; 2 = cancel checkbox
         function cancelCheckboxList(box){
             _checkboxFlag = 2;
             exec("insertOrderedList");
             setCollapse(box);
         }
-
         function createCheckbox(end){
             var html = '<span contenteditable="false" class="x-todo-box"><input type="checkbox"></span>';
             if (end && typeof end !== 'boolean'){
@@ -184,25 +170,22 @@ function createHTML(options = {}) {
             }
             return html;
         }
-
         function insertCheckbox (node){
             var li = getNodeByName(node, 'LI');
             li.insertBefore(document.createRange().createContextualFragment(createCheckbox(false)), li.firstChild);
             setCollapse(node);
         }
-
         function getCheckbox (node){
             return getNodeByClass(node, "x-todo-box");
         }
-
         function saveSelection(){
             var sel = window.getSelection();
+            currentSelection = sel;
             anchorNode = sel.anchorNode;
             anchorOffset = sel.anchorOffset;
             focusNode = sel.focusNode;
             focusOffset = sel.focusOffset;
         }
-
         function focusCurrent(){
             editor.content.focus();
             try {
@@ -221,7 +204,6 @@ function createHTML(options = {}) {
                 console.log(e)
             }
         }
-
         var _keyDown = false;
         function handleChange (event){
             var node = anchorNode;
@@ -249,7 +231,6 @@ function createHTML(options = {}) {
                 }
             }
         }
-
         var Actions = {
             bold: { state: function() { return queryCommandState('bold'); }, result: function() { return exec('bold'); }},
             italic: { state: function() { return queryCommandState('italic'); }, result: function() { return exec('italic'); }},
@@ -304,12 +285,39 @@ function createHTML(options = {}) {
             fontName: { result: function(name) { return exec('fontName', name); }},
             link: {
                 result: function(data) {
+                    var sel = document.getSelection();
                     data = data || {};
-                    var title = data.title;
-                    title = title || window.getSelection().toString();
                     var url = data.url || window.prompt('Enter URL for Link', 'https://');
-                    if (url){
-                        exec('insertHTML', "<a href='"+ url +"'>"+(title || url)+"</a>");
+                    if (url) {
+                        var el = document.createElement("a");
+                        el.setAttribute("href", url);
+                        var title = data.title || sel.toString() || url;
+                        el.text = title;
+                        // when adding a link, if our current node is empty, it may have a <br>
+                        // if so, replace it with '' so the added link doesn't end up with an extra space.
+                        // Also, if totally empty, we must format the paragraph to add the link into the container.
+                        var mustFormat = false;
+                        if (sel.anchorNode && sel.anchorNode.innerHTML === '<br>') {
+                            sel.anchorNode.innerHTML = '';
+                        } else if (!sel.anchorNode || sel.anchorNode === editor.content) {
+                            mustFormat = true;
+                        }
+                        // insert like this so we can replace current selection, if any
+                        var range = sel.getRangeAt(0);
+                        range.deleteContents();
+                        range.insertNode(el);
+                        // restore cursor to end
+                        range.setStartAfter(el);
+                        range.setEndAfter(el);
+                        sel.removeAllRanges();
+                        sel.addRange(range);
+                        // format paragraph if needed
+                        if (mustFormat){
+                            formatParagraph();
+                        }
+                        // save selection, and fire on change to our webview
+                        saveSelection();
+                        editor.settings.onChange();
                     }
                 }
             },
@@ -349,7 +357,6 @@ function createHTML(options = {}) {
                         pNode = anchorNode.parentNode;
                         if (anchorNode === editor.content) pNode = null;
                     }
-
                     if (anchorNode === editor.content || queryCommandValue(formatBlock) === ''){
                         formatParagraph();
                     }
@@ -369,7 +376,6 @@ function createHTML(options = {}) {
                 focus: function() { focusCurrent(); },
                 postHtml: function (){ postAction({type: 'CONTENT_HTML_RESPONSE', data: editor.content.innerHTML}); },
                 setPlaceholder: function(placeholder){ editor.content.setAttribute("placeholder", placeholder) },
-
                 setContentStyle: function(styles) {
                     styles = styles || {};
                     var bgColor = styles.backgroundColor, color = styles.color, pColor = styles.placeholderColor;
@@ -387,7 +393,6 @@ function createHTML(options = {}) {
                         }
                     }
                 },
-
                 commandDOM: function (command){
                     try {new Function("$", command)(exports.document.querySelector.bind(exports.document))} catch(e){console.log(e.message)};
                 },
@@ -395,7 +400,6 @@ function createHTML(options = {}) {
                     try {new Function("$", command)(exports.document)} catch(e){console.log(e.message)};
                 }
             },
-
             init: function (){
                 if (${useContainer}){
                     // setInterval(Actions.UPDATE_HEIGHT, 150);
@@ -405,7 +409,6 @@ function createHTML(options = {}) {
                     // body.style.height = docEle.clientHeight + 'px';
                 }
             },
-
             UPDATE_HEIGHT: function() {
                 if (!${useContainer}) return;
                 // var height = Math.max(docEle.scrollHeight, body.scrollHeight);
@@ -414,7 +417,6 @@ function createHTML(options = {}) {
                     _postMessage({type: 'OFFSET_HEIGHT', data: o_height = height});
                 }
             },
-
             UPDATE_OFFSET_Y: function (){
                 if (!${useContainer}) return;
                 var node = anchorNode || window.getSelection().anchorNode;
@@ -428,9 +430,7 @@ function createHTML(options = {}) {
                 }
             }
         };
-
         var init = function init(settings) {
-
             var paragraphSeparator = settings[defaultParagraphSeparatorString];
             var content = settings.element.content = createElement('div');
             content.id = 'content';
@@ -456,24 +456,20 @@ function createHTML(options = {}) {
                 } else if (enterStatus && queryCommandValue(formatBlock) === 'blockquote') {
                     formatParagraph();
                 }
-
                 saveSelection();
                 handleChange(_ref);
                 settings.onChange();
                 ${inputListener} && postAction({type: "ON_INPUT", data: {inputType: _ref.inputType, data: _ref.data}});
             };
             appendChild(settings.element, content);
-
             if (settings.styleWithCSS) exec('styleWithCSS');
             exec(defaultParagraphSeparatorString, paragraphSeparator);
-
             var actionsHandler = [];
             for (var k in Actions){
                 if (typeof Actions[k] === 'object' && Actions[k].state){
                     actionsHandler[k] = Actions[k]
                 }
             }
-
             function handler() {
                 var activeTools = [];
                 for(var k in actionsHandler){
@@ -483,7 +479,6 @@ function createHTML(options = {}) {
                 }
                 postAction({type: 'SELECTION_CHANGE', data: activeTools});
             };
-
             var _handleStateDT = null;
             function handleState(){
                 clearTimeout(_handleStateDT);
@@ -492,12 +487,10 @@ function createHTML(options = {}) {
                     saveSelection();
                 }, 50);
             }
-
             function handleSelecting(event){
                 event.stopPropagation();
                 handleState();
             }
-
             function postKeyAction(event, type){
                 postAction({type: type, data: {keyCode: event.keyCode, key: event.key}});
             }
@@ -572,7 +565,6 @@ function createHTML(options = {}) {
             addEventListener(content, 'paste', function (e) {
                 // get text representation of clipboard
                 var text = (e.originalEvent || e).clipboardData.getData('text/plain');
-
                 ${pasteListener} && postAction({type: 'CONTENT_PASTED', data: text});
                 if (${pasteAsPlainText}) {
                     // cancel paste
@@ -588,7 +580,6 @@ function createHTML(options = {}) {
                 compositionStatus = 0;
                 paragraphStatus && formatParagraph(true);
             })
-
             var message = function (event){
                 var msgData = JSON.parse(event.data), action = Actions[msgData.type];
                 if (action ){
@@ -610,9 +601,8 @@ function createHTML(options = {}) {
                 Actions.content.focus();
                 handleSelecting(event);
             });
-            return {content, paragraphSeparator: paragraphSeparator};
+            return {content, paragraphSeparator: paragraphSeparator, settings};
         };
-
         var _handleCTime = null;
         editor = init({
             element: document.getElementById('editor'),
